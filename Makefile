@@ -20,7 +20,7 @@ TCLOS_EXT=tclos.adj
 MPI_EXT=mpirun-n
 
 
-BINARIES=graph graph_par graph_omp convert_adj_to_dot convert_pairs_to_dot
+BINARIES=graph graph_par convert_adj_to_dot convert_pairs_to_dot
 
 
 
@@ -74,7 +74,7 @@ run-seq-1000: graph $(DATADIR)/$(DATASET_1000)
 	@echo "===== $@ ======"
 	./graph -i $(DATADIR)/$(DATASET_1000) -t adj > $(RESDIR_SEQ)/$(DATASET_1000)-$(TCLOS_EXT)
 
-run-seq-3000: graph $(DATADIR)/$(DATASET_3000) $(RESDIR_SEQ)/$(DATASET_3000)-$(TCLOS_EXT)
+run-seq-3000: graph $(DATADIR)/$(DATASET_3000) 
 	@mkdir -p $(RESDIR_SEQ)
 	@echo "===== $@ ======"
 	./graph -i $(DATADIR)/$(DATASET_3000) -t adj > $(RESDIR_SEQ)/$(DATASET_3000)-$(TCLOS_EXT)

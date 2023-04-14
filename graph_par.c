@@ -31,7 +31,6 @@
  * @param c : output: the adjacency matrix resulting from tansitive closure   
  */
 void warshall(size_t n, int a[n][n], int c[n][n]) {
-
 #ifdef PROGRESS
     size_t percent=0;
 #endif
@@ -40,7 +39,6 @@ void warshall(size_t n, int a[n][n], int c[n][n]) {
   for (size_t i = 0; i < n; i++)
     for (size_t j = 0; j < n; j++)
       c[i][j] = a[i][j];
-
 /*  updates the value of c[i][j] to true if there is a path 
   *  from i to j that goes through k. */
   for (size_t k = 0; k < n; k++) {
@@ -58,10 +56,40 @@ void warshall(size_t n, int a[n][n], int c[n][n]) {
   }
 }
 
+void parallel_warshall(size_t n, int a[n][n], int c[n][n], int num_procs, int rank) {
+    // Initialize matrix c from matrix a
+    for (size_t i = 0; i < n; i++)
+        for (size_t j = 0; j < n; j++)
+            c[i][j] = a[i][j];
+
+    // Compute the local transitive closure using the Floyd-Warshall algorithm
+    for (size_t k = 0; k < n; k++) {
+        // Distribute the k-th row to all processors
+        // MPI_Bcast(c[k], n, MPI_INT, k % num_procs, MPI_COMM_WORLD);
+
+        // #pragma omp parallel for schedule(dynamic)
+        for (size_t i = rank; i < n; i += num_procs) {
+            for (size_t j = 0; j < n; j++) {
+                c[i][j] = c[i][j] || (c[i][k] && c[k][j]);
+            }
+        }
+    }
+}
+
+
+
 /**
  * main
  */
 int main (int argc, char **argv) {
+
+ // MPi initialization
+  MPI_Init(&argc, &argv);
+
+  int num_procs, rank;
+  MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
 
 	  
 	char * filename = 0;
@@ -78,7 +106,8 @@ int main (int argc, char **argv) {
   if (strcmp(input_type, INPUT_TYPE_ADJ)==0) {
     // first get the adjacency matrix size
     n = matrix_lines_from_file(filename);
-    fprintf(stderr, "* %s has %ld lines.\n", filename, n);
+    if(rank == 0)
+      fprintf(stderr, "* %s has %ld lines.\n", filename, n);
   }
   // read from a file, pairs of 2 nodes per line
   // determine size n of matrix
@@ -116,17 +145,27 @@ int main (int argc, char **argv) {
   }
 
 #ifdef DEBUG
-  print_matrix ("a_orig", n , a, 0, n, 0, n, 0, false);
+  if(rank == 0)
+    print_matrix ("a_orig", n , a, 0, n, 0, n, 0, false);
 #endif
   //Compute
-  fprintf(stderr, "* starting computation (n=%ld) ... ", n);
+  if(rank == 0)
+    fprintf(stderr, "* starting computation (n=%ld) ... ", n);
   fflush(stderr);
   gettimeofday (&tv_begin, NULL);
-  warshall(n, a, c);
+  // warshall(n, a, c);
+  parallel_warshall(n, a, c, num_procs, rank);
+  int (*temp_c)[n] = malloc(sizeof(int[n][n]));
+  memcpy(temp_c, c, sizeof(int[n][n]));
+  MPI_Allreduce(temp_c, c, n * n, MPI_INT, MPI_LOR, MPI_COMM_WORLD);
+  free(temp_c);
   gettimeofday (&tv_end, NULL);
-  fprintf(stderr, " done.\n");
 
-  print_matrix (NULL, n, c, 0, n, 0, n, 0, false);
+  if(rank == 0){
+    fprintf(stderr, " done.\n");
+    print_matrix (NULL, n, c, 0, n, 0, n, 0, false);
+  }
+
 
 #ifdef CCOMP
   size_t ncomps;
@@ -134,7 +173,8 @@ int main (int argc, char **argv) {
 
   free(a);
   free(c);
-  fprintf (stderr, "* %ld connected components after make_ccomp_digraph.\n", ncomps);
+  if(rank == 0)
+    fprintf (stderr, "* %ld connected components after make_ccomp_digraph.\n", ncomps);
 
   // write the graph transitivly closed in dot format
   char *output_file = malloc(strlen(OUTPUT_TYPE) + strlen(OUTPUT_EXT) + strlen(filename) + 1); 
@@ -150,7 +190,13 @@ int main (int argc, char **argv) {
 
   //---------------------------------------------------------------------------
   //Execution times
-  fprintf (stderr, "Init : %lfs, Compute : %lfs\n", DIFFTEMPS (tv_init, tv_begin), DIFFTEMPS (tv_begin, tv_end));
+  if(rank == 0)
+    fprintf (stderr, "Init : %lfs, Compute : %lfs\n", DIFFTEMPS (tv_init, tv_begin), DIFFTEMPS (tv_begin, tv_end));
+
+  //MPI finalize
+  MPI_Finalize();
+
+
 
   return 0;
 }
