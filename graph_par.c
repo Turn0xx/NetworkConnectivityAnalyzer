@@ -8,6 +8,10 @@
 #include <stdbool.h>
 #include <string.h>
 
+// for MPI
+#include <mpi.h>
+
+
 
 // matrix size and some others
 #include "graph.h"
