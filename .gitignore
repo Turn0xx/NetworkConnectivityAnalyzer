@@ -3,3 +3,6 @@
 /results-par
 seq
 par
+*.txt
+*.dot
+*.adj
