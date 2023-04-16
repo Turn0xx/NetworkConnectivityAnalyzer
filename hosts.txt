@@ -1,0 +1,8 @@
+vmCalculParallele0 slots=1
+vmCalculParallele2 slots=1
+vmCalculParallele1 slots=1
+vmCalculParallele3 slots=1
+vmCalculParallele5 slots=1
+vmCalculParallele6 slots=1
+vmCalculParallele7 slots=1
+vmCalculParallele8 slots=1
