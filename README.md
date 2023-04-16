@@ -1,146 +1,52 @@
-# Projet Graphe
+# Projet : Parallélisation de l'algorithme de fermeture transitive
 
-Un besoin fréquent est de calculer les composantes connexes d'un graphe.
-On trouve de très nombreux cas d'usage dans les données issues de l'internet : les liens entre les pages web qu'utilisent les moteurs de recherche, les relations entre utilisateurs de twitter (quels utilisateurs suivent quels autres), ... 
-Calculer les composantes connexes permet d'identifier des communautés distinctes, qui n'ont pas de lien entre elles.
-On se concentrera dans la suite sur les graphes orientés.
+## Étudiants
+- Mazlani Khalil  21908958
+- El Hilali Mouad 21904365
 
-## Calcul des composantes connexes
+## Introduction
 
-Un moyen de calculer les composantes connexes consiste à calculer d'abord la **fermeture transitive** du graphe. Si on prend par exemple le graphe de la Fig. 1, on obtiendra le graphe de la Fig.2 après fermeture transitive.
+Dans ce projet, nous avons travaillé sur la parallélisation de l'algorithme de fermeture transitive pour le calcul des composantes connexes d'un graphe. Les composantes connexes sont utiles pour identifier des communautés distinctes dans les données issues de l'internet, comme les relations entre utilisateurs de Twitter ou les liens entre les pages web. Nous avons utilisé MPI et OpenMP pour paralléliser l'algorithme de Warshall qui calcule la fermeture transitive d'un graphe.
 
-<figure>
-<img src="pics/10.dot.svg" alt= “” width="250">
-<figcaption>Fig.1 - Exemple de graphe avec 3 composantes connexes.</figcaption>
-</figure>
+## Difficultés rencontrées et idées de parallélisation
 
-Il est beaucoup plus simple de calculer les composantes connexes à partir de la fermeture transitive.
+La principale difficulté rencontrée lors de la parallélisation était la dépendance des données dans l'algorithme de Warshall. Pour résoudre ce problème, nous nous sommes inspirés de l'article [1] pour diviser la matrice d'adjacence en sous-matrices et distribuer les calculs aux différents processeurs. De plus, nous avons utilisé OpenMP pour paralléliser les boucles internes de l'algorithme de Warshall, permettant ainsi un gain de performance supplémentaire.
 
-<figure>
-<img src="pics/10.adj-tclos.dot.svg" alt= “” width="300">
-<figcaption>Fig.2 - Graphe de la Fig. 1 avec fermeture transitive.</figcaption>
-</figure>
+# Mesures de performance
 
->  Dans ce projet, on ne parallélisera que le calcul de fermeture transitive.
+Nous avons effectué des tests de performance sur une machine équipée de 6 cœurs et 12 threads, avec un cache L2 de 250 Mo. Les tests ont été réalisés sur des matrices de tailles 1000x1000, 3000x3000 et 10000x10000. Nous avons utilisé `mpirun -n 4` pour MPI et `omp_set_num_threads(3)` pour OpenMP car on a tester avec plusieurs valeur pour openmp et 3 était la plus performantes.
 
-## Représentation du graphe
+## Plateforme matérielle
 
-Pour les calculs, une représentation commode d'un graphe est la *matrice d'adjacence*. Dans cette matrice une valeur de $1$ en ligne $i$ et colonne $j$ indique l'existence d'une arrête du sommet $i$ vers le sommet $j$. Notre exemple de la Fig. 1 est représenté par la matrice d'adjacence suivante :
+* CPU : 6 cœurs, 12 threads
+* Cache L2 : 250 Mo
 
-```
-0 0 1 0 1 0 0 0 0 0
-0 0 0 1 0 1 0 0 0 0
-0 0 0 0 0 0 0 1 0 0
-0 0 0 0 0 0 0 0 0 0
-0 0 0 0 0 0 0 1 0 0
-0 0 0 1 0 0 0 0 0 0
-0 0 0 0 0 0 0 0 0 0
-0 0 0 0 0 0 1 0 0 0
-0 0 0 0 0 0 0 0 0 0
-0 0 0 0 0 0 0 0 1 0
-```
+## Utilisation
+ Pour effectuer des tests sur les différentes tailles de matrices, utilisez les cibles make fournies dans le Makefile. Voici les cibles disponibles et leur fonction :
 
-Les lignes et colonnes sont numérotées à partir de 0. Les arcs du sommet 0 se lisent sur la première ligne : il y a un 1 dans les colonnes 2 et 4, représentant les arcs entre les sommets `0->2` et `0->4`.
-
-Un ensemble de matrices d'ajacence exemple sont fournies dans le répertoire `share/` dans les fichiers dont l'extension est `.adj`.
-
-## Fermeture transitive
-
-### Algorithme séquentiel
-
-La version séquentielle livrée dans le fichier `graph.c` utilise l'algorithme de [Warshall](https://fr.wikipedia.org/wiki/Algorithme_de_Warshall). Il ressemble fortement à l'algorithme de plus court chemin Warshall-Floyd et a une complexité de $O(n^3)$ pour $n$ sommets.  
-
-### Utilisation
-
-#### Sur une matrice d'ajacence
-
-Le `Makefile` livré produit l'exécutable `graph` et s'utilise comme ceci :
-
-```bash
-% ./graph -i share/10x10.adj -t adj
-```
-
-La sortie contient :
-
-- les messages d'information, sortent sur `stderr`, 
-- la matrice d'adjacence de la fermeture transitive sur `stdout`, 
-  ce qui permet de récupérer cette matrice par une redirection, par exemple: 
-  
-  ```bash
-  % ./graph -i share/10x10.adj -t adj > 10x10-tclos.adj
-  ```
-
-#### Sur une liste de paires
-
-Pour faciliter des tests sur d'autres jeu de données, `graph`permet de lire un autre format d'entrée constitué de lignes comportant 2 entiers séparés par une tabulation. Une ligne comme `0  42` indique qu'il y un arc `0 -> 42`. Dans `share/` ces fichiers de données ont l'extension `.txt`.
-
-Notez qu'une matrice d'ajacence de taille $n$ x $n$ est construite, où $n$ est l'entier le plus grand observé dans le fichier. 
-
-### Visualisation
-
-Le package [graphviz](https://graphviz.org) contient l'utilitaire `dot` pour dessiner des graphes dans de nombeux formats de sortie (pdf, png, svg, ....). Les Fig.1 et Fig.2 sont des exemples. Il prend en entrée une description de graphe qui peut être très simple avec le langage [dot](https://graphviz.org/doc/info/lang.html). 
-
-Graphviz propose aussi l'utilitaire `ccomps` qui permet de calculer les composantes connexes d'un graphe représenté en dot (peut être utile pour vérifier).
-
-Vous avez un programme `convert_adj_to_dot` qui permet de convertir une matrice d'adjacence en un fichier dot.
-
-```bash
-%  ./convert_adj_to_dot share/10x10.adj
-* share/10x10.adj has 10 lines.
-* about to write to share/10x10.adj.dot in dot format ... done.
-%
-% ccomps -s -v share/10x10.adj.dot
-(   0)       5 nodes       5 edges
-(   1)       3 nodes       3 edges
-(   2)       2 nodes       1 edges
-            10 nodes       9 edges       3 components %1
-```
-
-On peut dessiner le graphe représenté par le fichier `.dot` avec la commande `dot`de graphviz, dans différents formats.
-Par exemple pour générer un PDF:
-```bash
-% dot -Tpdf share/10x10.adj.dot > 10x10.adj.dot.pdf
-```
-
-## Travail à faire
-
-Le travail est à faire en binome.
-
-Le travail consiste à paralléliser l'algorithme de fermeture transitive en utilisant tout ce que vous savez faire (MPI, OpenMP).
-Vous pouvez utiliser les idées de l'article [1] pour cette parallélisation.
-
-Vous devrez rendre une archive `projet_2223.tar.gz` contenant:
-- un fichier `README.md` (format markdown) ou `README.pdf` (pdf) comportant :
-    + les 2 noms étudiants
-    + un paragraphe d'explications indiquant les difficultés rencontrées et l'idée de votre parallélisation en la justifiant.
-    + des mesures de performances (en indiquant la plateforme matérielle utilisée). Il faut indiquer les accélérations et l'efficacité, et idéalement des courbes de performances.
-  
-- les codes source (votre version parallélisée sera dans un fichier `graph_par.c`) et le Makefile 
-- ne laissez pas de gros jeux de tests dans votre archive mais modifiez le Makefile pour générer les jeux de données utilisés.
-
-## Note sur le Makefile
-
-Lisez le ! Il faut modifier la variable `CC` pour utiliser le compilateur que vous souhaitez. Le `Makefile` livré génére le binaire `graph` et `graph_par`. Vous n'avez pas `graph_par.c` au début bien sûr.
-
-Des matrices d'ajacence peuvent être produites avec le script python `gen_adj.py`. Il prend deux paramètres : le nombre total de sommets, et le nombre de composantes connexes qu'on veut avoir dans la matrice d'ajacence. Dans le Makefile, des *cibles* (*targets*) existent déjà comme `gen-data-1000`.
-
-Etant donné l'espace disque qui risque d'être contraint, n'hésitez à supprimer les fichiers `.adj` et à laisser le Makefile les recréer (les dépendances des cibles font cela).
-
-Vous pouvez utiliser tout de suite la cible `test-seq-1000` qui déclenche la génération d'un jeu de donnée (matrice 1000x1000)
-et l'exécution de `graph` sur ce jeu de données.
-
-## Performances
-
-**Edit** : concernant la parallélisation MPI, étant donné la performance tout à fait basique des communications sur la plateforme OpenStack,
-le temps gagné en partageant les calculs sur plusieurs hosts est très faible en regard des temps de communications.
-L'utilisation d'OpenMP seul doit amener un gain.
-
-Les performances de références précedemment publiées étaient fausses. 
-La plateforme qui a été redémarrée l'a été sur une distribution Ubuntu 18.02 alors qu'elle l'était précédemment sur une Ubuntu 20.02. Ceci ne devrait pas changer fondamentalement les choses, mais la version d'openmpi sur Ubuntu 18.02 tente de sélectionner une interface réseau infiniband (`openib`) et je préfère remettre l'environnement original pour être certain du comportement.  
+* `make test-par-1000` : Exécute les tests séquentiels et parallèles pour une matrice 1000x1000 et compare les résultats.
+* `make test-par-3000` : Exécute les tests séquentiels et parallèles pour une matrice 3000x3000 et compare les résultats.
+* `make test-par-10000` : Exécute les tests séquentiels et parallèles pour une matrice 10000x10000 et compare les résultats.
 
 
+## Résultats
+
+| Taille de la matrice | Temps séquentiel | Temps parallélisé | Accélération | Efficacité |
+| -------------------- | ---------------- | ----------------- | ------------ | ---------- |
+| 10000x10000          | 700 s            | 98 s              | 7.14         | 1,785      |
+| 3000x3000            | 19 s             | 2.80 s            | 6.79         | 1,698      |
+| 1000x1000            | 0.70 s           | 0.28 s            | 2.50         | 0,625      |
+
+Les résultats montrent que notre implémentation parallélisée offre une accélération significative par rapport à l'approche séquentielle pour les matrices de grande taille, avec une efficacité relativement élevée pour les matrices 10000x10000 et 3000x3000. Cependant, pour les matrices de taille plus petite (1000x1000), l'efficacité est moindre. Cela suggère que des améliorations supplémentaires pourraient être apportées à notre approche pour mieux gérer les graphes de différentes tailles et densités.
+
+## Optimisation
+Il est possible que la modification du `#define BLOCK_SIZE 10` puisse influencer les performances. Changer cette valeur peut entraîner une meilleure utilisation de la mémoire cache et une réduction des accès mémoire, ce qui pourrait améliorer les performances globales. Cependant, il est essentiel d'effectuer des tests supplémentaires pour déterminer la valeur optimale de BLOCK_SIZE, car cela dépendra de l'architecture matérielle et de la taille de la matrice.
 
 
-## Bibliographie
+## Conclusion
 
-[1] Alves, C.E.R., Cáceres, E.N., de Castro, A.A. et al. Parallel transitive closure algorithm. J Braz Comput Soc 19, 161–166 (2013). https://doi.org/10.1007/s13173-012-0089-z
+Notre travail sur la parallélisation de l'algorithme de fermeture transitive pour le calcul des composantes connexes d'un graphe a abouti à une implémentation MPI et OpenMP efficace et performante. Les résultats obtenus montrent une accélération significative par rapport à l'implémentation séquentielle, en particulier pour les matrices de grande taille.
+
+Les principales difficultés rencontrées lors de la parallélisation étaient liées à la dépendance des données dans l'algorithme de Warshall. En utilisant l'article [1] comme référence, nous avons réussi à diviser la matrice d'adjacence en sous-matrices et à distribuer les calculs aux différents processeurs. L'utilisation d'OpenMP pour paralléliser les boucles internes a également contribué à améliorer les performances de notre implémentation.
+
+Dans l'ensemble, notre approche parallélisée a montré des résultats prometteurs et a démontré l'efficacité de la combinaison de MPI et OpenMP pour résoudre le problème de calcul des composantes connexes d'un graphe. Dans les travaux futurs, nous pourrions explorer d'autres techniques de parallélisation pour améliorer encore les performances de l'algorithme et adapter notre approche à des graphes de tailles et de densités variables.

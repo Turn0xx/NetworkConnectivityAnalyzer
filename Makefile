@@ -121,15 +121,17 @@ test-seq-3000: run-seq-3000
 
 test-seq-10000: run-seq-10000 
 
-test-par-1000: run-par-1000
+test-par-1000: run-seq-1000 run-par-1000
 	@echo "$(shell cmp $(RESDIR_PAR)/$(DATASET_1000)-$(MPI_EXT)*-$(TCLOS_EXT) $(RESDIR_SEQ)/$(DATASET_1000)-$(TCLOS_EXT))"
+	@echo "MD5 $(RESDIR_PAR)/$(DATASET_1000)-$(MPI_EXT)*-$(TCLOS_EXT)"
+	@echo "$(shell $(MD5) $(RESDIR_PAR)/$(DATASET_1000)-$(MPI_EXT)*-$(TCLOS_EXT) )"
 
 test-par-3000: run-seq-3000 run-par-3000
 	@echo "$(shell cmp $(RESDIR_PAR)/$(DATASET_3000)-$(MPI_EXT)*-$(TCLOS_EXT) $(RESDIR_SEQ)/$(DATASET_3000)-$(TCLOS_EXT))"
 	@echo "MD5 $(RESDIR_PAR)/$(DATASET_3000)-$(MPI_EXT)*-$(TCLOS_EXT)"
 	@echo "$(shell $(MD5) $(RESDIR_PAR)/$(DATASET_3000)-$(MPI_EXT)*-$(TCLOS_EXT) )"
 
-test-par-10000: run-par-10000 
+test-par-10000: run-seq-10000 run-par-10000 
 	@echo "$(shell cmp $(RESDIR_PAR)/$(DATASET_10000)-$(MPI_EXT)*-$(TCLOS_EXT) $(RESDIR_SEQ)/$(DATASET_10000)-$(TCLOS_EXT))"
 	@echo "MD5"
 	@echo "$(shell $(MD5) $(RESDIR_PAR)/$(DATASET_10000)-$(MPI_EXT)*-$(TCLOS_EXT) )"
